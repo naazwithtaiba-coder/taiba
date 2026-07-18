@@ -1,0 +1,60 @@
+// ============================================================================
+// sequenceConfig.js
+// ----------------------------------------------------------------------------
+// This is the ONLY file you should need to touch to point the app at a
+// different image sequence. Everything else (loader, canvas renderer,
+// scroll math) derives itself automatically from these values.
+// ============================================================================
+
+const sequenceConfig = {
+  // Folder inside /public where frames live (must start and end with "/")
+  FRAME_FOLDER: '/frames/',
+
+  // Text that comes before the frame number in each filename
+  FRAME_PREFIX: 'ezgif-frame-',
+
+  // File extension, including the dot
+  FILE_EXTENSION: '.jpg',
+
+  // First and last frame numbers (inclusive)
+  START_FRAME: 1,
+  END_FRAME: 281,
+
+  // How many digits the frame number is padded to.
+  // 3 -> 001, 002 ... 281
+  ZERO_PADDING: 3,
+
+  // Original capture rate of the source sequence. Used only for reference /
+  // easing calculations, not for playback speed (scroll controls that).
+  SOURCE_FPS: 30,
+};
+
+/**
+ * Builds the full list of frame URLs from the config above.
+ * Nothing here is hardcoded — changing START_FRAME/END_FRAME/padding/prefix
+ * in the object above is all that's needed to support a new sequence.
+ */
+export function buildFrameUrls(config = sequenceConfig) {
+  const { FRAME_FOLDER, FRAME_PREFIX, FILE_EXTENSION, START_FRAME, END_FRAME, ZERO_PADDING } =
+    config;
+
+  const urls = [];
+  for (let frameNumber = START_FRAME; frameNumber <= END_FRAME; frameNumber++) {
+    const padded = String(frameNumber).padStart(ZERO_PADDING, '0');
+    urls.push(`${FRAME_FOLDER}${FRAME_PREFIX}${padded}${FILE_EXTENSION}`);
+  }
+  return urls;
+}
+
+export const TOTAL_FRAMES = sequenceConfig.END_FRAME - sequenceConfig.START_FRAME + 1;
+
+// How many pixels of scroll correspond to a single frame of the sequence.
+// Shared by CanvasSequence (pin/scrub distance) and AnimatedText (line timing)
+// so both stay perfectly in sync.
+export const SCROLL_DISTANCE_PER_FRAME = 22;
+
+export function getTotalScrollDistance(totalFrames = TOTAL_FRAMES) {
+  return totalFrames * SCROLL_DISTANCE_PER_FRAME;
+}
+
+export default sequenceConfig;
