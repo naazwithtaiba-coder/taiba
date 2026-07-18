@@ -1,0 +1,49 @@
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { buildFrameUrls } from '../config/sequenceConfig';
+import { preloadFrames } from '../utils/frameLoader';
+
+/**
+ * useImageSequence
+ * ----------------------------------------------------------------------------
+ * Builds the frame URL list from config, preloads every image once, and
+ * exposes loading progress plus the final decoded image array.
+ * Guarantees images are only ever requested once (StrictMode-safe).
+ */
+export function useImageSequence() {
+  const [progress, setProgress] = useState(0); // 0 - 100
+  const [isLoaded, setIsLoaded] = useState(false);
+  const imagesRef = useRef([]);
+  const hasStartedRef = useRef(false);
+
+  useEffect(() => {
+    if (hasStartedRef.current) return; // prevent duplicate preload runs
+    hasStartedRef.current = true;
+
+    let cancelled = false;
+    const urls = buildFrameUrls();
+
+    preloadFrames(urls, (loaded, total) => {
+      if (cancelled) return;
+      setProgress(Math.round((loaded / total) * 100));
+    }).then((images) => {
+      if (cancelled) return;
+      imagesRef.current = images;
+      setIsLoaded(true);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const getFrame = useCallback((index) => {
+    return imagesRef.current[index] || null;
+  }, []);
+
+  return {
+    progress,
+    isLoaded,
+    totalFrames: imagesRef.current.length,
+    getFrame,
+  };
+}
