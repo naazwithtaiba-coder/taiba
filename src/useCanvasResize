@@ -1,0 +1,52 @@
+import { useEffect } from 'react';
+
+/**
+ * useCanvasResize
+ * ----------------------------------------------------------------------------
+ * Keeps a canvas element sized to the viewport at the correct device pixel
+ * ratio, and calls `onResize` after every resize so the caller can redraw
+ * the current frame (otherwise the canvas would go blank until scroll).
+ */
+export function useCanvasResize(canvasRef, onResize) {
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+
+    const ctx = canvas.getContext('2d');
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2); // cap DPR for perf
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+
+      // Reset then scale so drawing coordinates stay in CSS pixels.
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+
+      if (onResize) onResize(width, height);
+    }
+
+    resize();
+
+    let resizeTimeout;
+    function debouncedResize() {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(resize, 120);
+    }
+
+    window.addEventListener('resize', debouncedResize, { passive: true });
+    window.addEventListener('orientationchange', debouncedResize, { passive: true });
+
+    return () => {
+      clearTimeout(resizeTimeout);
+      window.removeEventListener('resize', debouncedResize);
+      window.removeEventListener('orientationchange', debouncedResize);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canvasRef]);
+}
