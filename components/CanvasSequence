@@ -1,0 +1,111 @@
+import { useEffect, useRef, useCallback } from 'react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useCanvasResize } from '../hooks/useCanvasResize';
+import { getTotalScrollDistance } from '../config/sequenceConfig';
+
+gsap.registerPlugin(ScrollTrigger);
+
+/**
+ * CanvasSequence
+ * ----------------------------------------------------------------------------
+ * Pins a fullscreen canvas and scrubs through the preloaded frame array as
+ * the user scrolls. Drawing always preserves aspect ratio (cover-fit, never
+ * stretched) and is DPR-aware for crisp Retina rendering.
+ *
+ * `active` gates GSAP/ScrollTrigger initialization until preloading is done.
+ */
+export default function CanvasSequence({ getFrame, totalFrames, active, pinWrapperRef }) {
+  const canvasRef = useRef(null);
+  const dimsRef = useRef({ width: window.innerWidth, height: window.innerHeight });
+  const currentFrameRef = useRef({ index: 0 });
+  const rafRef = useRef(null);
+  const needsRedrawRef = useRef(true);
+
+  const drawFrame = useCallback(
+    (index) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const { width, height } = dimsRef.current;
+
+      const img = getFrame(Math.max(0, Math.min(totalFrames - 1, Math.round(index))));
+
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, width, height);
+
+      if (!img) return;
+
+      // Cover-fit math: scale so the image fully covers the canvas without
+      // distortion, cropping whichever axis overflows.
+      const canvasRatio = width / height;
+      const imageRatio = img.naturalWidth / img.naturalHeight;
+
+      let drawWidth;
+      let drawHeight;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      if (imageRatio > canvasRatio) {
+        drawHeight = height;
+        drawWidth = img.naturalWidth * (height / img.naturalHeight);
+        offsetX = (width - drawWidth) / 2;
+      } else {
+        drawWidth = width;
+        drawHeight = img.naturalHeight * (width / img.naturalWidth);
+        offsetY = (height - drawHeight) / 2;
+      }
+
+      ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+    },
+    [getFrame, totalFrames]
+  );
+
+  // rAF render loop — only redraws when the target frame actually changes,
+  // so idle scroll positions cost zero extra GPU/CPU work.
+  useEffect(() => {
+    function loop() {
+      if (needsRedrawRef.current) {
+        drawFrame(currentFrameRef.current.index);
+        needsRedrawRef.current = false;
+      }
+      rafRef.current = requestAnimationFrame(loop);
+    }
+    rafRef.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [drawFrame]);
+
+  useCanvasResize(canvasRef, (width, height) => {
+    dimsRef.current = { width, height };
+    needsRedrawRef.current = true;
+  });
+
+  // Scroll-driven scrub of the frame sequence.
+  useEffect(() => {
+    if (!active || totalFrames === 0) return undefined;
+
+    const wrapper = pinWrapperRef.current;
+    if (!wrapper) return undefined;
+
+    const st = ScrollTrigger.create({
+      trigger: wrapper,
+      start: 'top top',
+      end: `+=${getTotalScrollDistance(totalFrames)}`, // scroll distance scales with frame count
+      pin: true,
+      scrub: 1, // slight smoothing so scrubbing never feels jumpy
+      anticipatePin: 1,
+      onUpdate: (self) => {
+        currentFrameRef.current.index = self.progress * (totalFrames - 1);
+        needsRedrawRef.current = true;
+      },
+    });
+
+    // Draw the very first frame immediately so there's no blank flash.
+    needsRedrawRef.current = true;
+
+    return () => st.kill();
+  }, [active, totalFrames, pinWrapperRef]);
+
+  return <canvas ref={canvasRef} className="sequence-canvas" />;
+}
