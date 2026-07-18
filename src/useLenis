@@ -1,0 +1,49 @@
+import { useEffect, useRef } from 'react';
+import Lenis from '@studio-freight/lenis';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
+
+/**
+ * useLenis
+ * ----------------------------------------------------------------------------
+ * Initializes Lenis smooth-scroll and wires it into GSAP's ticker so
+ * ScrollTrigger and Lenis stay perfectly synchronized. Only runs once
+ * `enabled` becomes true (i.e. after preloading finishes).
+ */
+export function useLenis(enabled) {
+  const lenisRef = useRef(null);
+
+  useEffect(() => {
+    if (!enabled) return undefined;
+
+    const lenis = new Lenis({
+      duration: 1.1,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+      wheelMultiplier: 1,
+      touchMultiplier: 1.2,
+    });
+    lenisRef.current = lenis;
+
+    // Keep ScrollTrigger informed every time Lenis scrolls.
+    lenis.on('scroll', ScrollTrigger.update);
+
+    // Drive Lenis from GSAP's ticker instead of its own rAF loop so both
+    // stay on the same clock — this is what removes jitter/shaking.
+    const tickerCallback = (time) => {
+      lenis.raf(time * 1000);
+    };
+    gsap.ticker.add(tickerCallback);
+    gsap.ticker.lagSmoothing(0);
+
+    return () => {
+      gsap.ticker.remove(tickerCallback);
+      lenis.destroy();
+      lenisRef.current = null;
+    };
+  }, [enabled]);
+
+  return lenisRef;
+}
