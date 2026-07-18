@@ -1,0 +1,67 @@
+import { useEffect, useRef } from 'react';
+import gsap from 'gsap';
+
+/**
+ * LoadingScreen
+ * ----------------------------------------------------------------------------
+ * Full-black cinematic preloader. Fades itself out smoothly once `progress`
+ * hits 100, then calls onComplete so the parent can mount the scroll
+ * experience and initialize GSAP/ScrollTrigger.
+ */
+export default function LoadingScreen({ progress, isLoaded, onComplete }) {
+  const rootRef = useRef(null);
+  const barRef = useRef(null);
+  const hasFiredComplete = useRef(false);
+
+  // Animate the progress bar width smoothly rather than snapping per frame.
+  useEffect(() => {
+    if (!barRef.current) return;
+    gsap.to(barRef.current, {
+      width: `${progress}%`,
+      duration: 0.4,
+      ease: 'power2.out',
+    });
+  }, [progress]);
+
+  useEffect(() => {
+    if (isLoaded && progress >= 100 && !hasFiredComplete.current) {
+      hasFiredComplete.current = true;
+
+      const tl = gsap.timeline({
+        delay: 0.35,
+        onComplete: () => {
+          if (rootRef.current) rootRef.current.style.display = 'none';
+          onComplete?.();
+        },
+      });
+
+      tl.to(rootRef.current.querySelector('.loading-inner'), {
+        opacity: 0,
+        y: -12,
+        duration: 0.5,
+        ease: 'power2.inOut',
+      }).to(
+        rootRef.current,
+        {
+          opacity: 0,
+          duration: 0.7,
+          ease: 'power2.inOut',
+        },
+        '-=0.2'
+      );
+    }
+  }, [isLoaded, progress, onComplete]);
+
+  return (
+    <div ref={rootRef} className="loading-screen" aria-live="polite">
+      <div className="loading-inner">
+        <div className="loading-mark">SPIDER-MAN</div>
+        <div className="loading-percentage">{String(progress).padStart(2, '0')}%</div>
+        <div className="loading-bar-track">
+          <div ref={barRef} className="loading-bar-fill" />
+        </div>
+        <p className="loading-subtitle">Preparing the city&hellip;</p>
+      </div>
+    </div>
+  );
+}
