@@ -1,1 +1,88 @@
+import { useEffect, useRef } from 'react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { getTotalScrollDistance } from '../config/sequenceConfig';
+
+gsap.registerPlugin(ScrollTrigger);
+
+// ----------------------------------------------------------------------------
+// Story beats. Each line's `at` is a fraction (0–1) of the total scroll
+// through the sequence — tune these to match the key moments in your frames.
+// Lines alternate left/right and never overlap.
+// ----------------------------------------------------------------------------
+const LINES = [
+  { text: 'With great power…', align: 'left', at: 0.06 },
+  { text: '…comes great responsibility.', align: 'right', at: 0.16 },
+  { text: 'The city never sleeps.', align: 'left', at: 0.38 },
+  { text: 'And neither does its hero.', align: 'right', at: 0.48 },
+  { text: 'One choice.', align: 'left', at: 0.68 },
+  { text: 'One chance.', align: 'right', at: 0.75 },
+  { text: 'Your friendly neighborhood', align: 'left', at: 0.9 },
+  { text: 'Spider-Man.', align: 'right', at: 0.96 },
+];
+
+const HOLD_FRACTION = 0.05; // how long (as a fraction of total scroll) each line stays fully visible
+
+export default function AnimatedText({ totalFrames, active, pinWrapperRef }) {
+  const lineRefs = useRef([]);
+
+  useEffect(() => {
+    if (!active || !totalFrames) return undefined;
+
+    const wrapper = pinWrapperRef.current;
+    if (!wrapper) return undefined;
+
+    const totalScroll = getTotalScrollDistance(totalFrames);
+    const triggers = [];
+
+    LINES.forEach((line, i) => {
+      const el = lineRefs.current[i];
+      if (!el) return;
+
+      const fadeWindow = HOLD_FRACTION * 0.4;
+      const start = Math.max(0, line.at - fadeWindow);
+      const end = Math.min(1, line.at + HOLD_FRACTION + fadeWindow);
+
+      gsap.set(el, { opacity: 0, y: 24 });
+
+      const tl = gsap.timeline({ paused: true });
+      tl.to(el, { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' })
+        .to(el, { opacity: 1, y: 0, duration: HOLD_FRACTION })
+        .to(el, { opacity: 0, y: -16, duration: 0.3, ease: 'power2.in' });
+
+      const st = ScrollTrigger.create({
+        trigger: wrapper,
+        start: 'top top',
+        end: `+=${totalScroll}`,
+        onUpdate: (self) => {
+          const progress = self.progress;
+          if (progress < start || progress > end) {
+            tl.progress(progress < start ? 0 : 1);
+            return;
+          }
+          const local = (progress - start) / (end - start);
+          tl.progress(gsap.utils.clamp(0, 1, local));
+        },
+      });
+
+      triggers.push(st);
+    });
+
+    return () => triggers.forEach((t) => t.kill());
+  }, [active, totalFrames, pinWrapperRef]);
+
+  return (
+    <div className="text-layer" aria-hidden="false">
+      {LINES.map((line, i) => (
+        <p
+          key={line.text}
+          ref={(el) => (lineRefs.current[i] = el)}
+          className={`cinematic-line cinematic-line--${line.align}`}
+        >
+          {line.text}
+        </p>
+      ))}
+    </div>
+  );
+}
 
