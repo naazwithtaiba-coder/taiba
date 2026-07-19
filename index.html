@@ -1,0 +1,215 @@
+/* ============================================================================
+   Global reset + cinematic design tokens
+   ============================================================================ */
+
+:root {
+  --color-black: #000000;
+  --color-white: #f5f5f5;
+  --color-spidey-red: #e62429;
+  --color-glow: rgba(230, 36, 41, 0.35);
+  --font-display: 'Bebas Neue', 'Oswald', sans-serif;
+  --font-body: 'Oswald', sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background: var(--color-black);
+  color: var(--color-white);
+  overflow-x: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  position: relative;
+  width: 100%;
+}
+
+/* ============================================================================
+   Loading screen
+   ============================================================================ */
+
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: radial-gradient(circle at 50% 50%, #0a0a0a 0%, #000000 70%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+  padding: 0 24px;
+}
+
+.loading-mark {
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 4vw, 2.2rem);
+  letter-spacing: 0.35em;
+  color: var(--color-white);
+  text-shadow: 0 0 24px var(--color-glow);
+}
+
+.loading-percentage {
+  font-family: var(--font-display);
+  font-size: clamp(3.5rem, 12vw, 7rem);
+  line-height: 1;
+  color: var(--color-spidey-red);
+  text-shadow: 0 0 40px var(--color-glow);
+  letter-spacing: 0.05em;
+}
+
+.loading-bar-track {
+  width: min(320px, 60vw);
+  height: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.loading-bar-fill {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-spidey-red), #ff5b5f);
+  box-shadow: 0 0 12px var(--color-glow);
+}
+
+.loading-subtitle {
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(245, 245, 245, 0.5);
+}
+
+/* ============================================================================
+   Pin wrapper + canvas
+   ============================================================================ */
+
+.pin-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.sequence-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: block;
+  background: #000;
+}
+
+/* ============================================================================
+   Cinematic text overlay
+   ============================================================================ */
+
+.text-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.cinematic-line {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 4.2vw, 3.6rem);
+  letter-spacing: 0.06em;
+  color: var(--color-white);
+  text-shadow: 0 0 22px rgba(0, 0, 0, 0.8), 0 0 36px var(--color-glow);
+  max-width: 45vw;
+  line-height: 1.15;
+}
+
+.cinematic-line--left {
+  left: clamp(24px, 6vw, 96px);
+  text-align: left;
+}
+
+.cinematic-line--right {
+  right: clamp(24px, 6vw, 96px);
+  text-align: right;
+}
+
+@media (max-width: 768px) {
+  .cinematic-line {
+    max-width: 80vw;
+    font-size: clamp(1.2rem, 6vw, 2rem);
+  }
+
+  .cinematic-line--left {
+    left: 20px;
+  }
+
+  .cinematic-line--right {
+    right: 20px;
+  }
+}
+
+/* ============================================================================
+   Scroll hint
+   ============================================================================ */
+
+.scroll-hint {
+  position: fixed;
+  bottom: clamp(24px, 5vh, 48px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: rgba(245, 245, 245, 0.75);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.scroll-hint-line {
+  width: 1px;
+  height: 36px;
+  background: linear-gradient(to bottom, rgba(245, 245, 245, 0.7), transparent);
+  animation: scroll-hint-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes scroll-hint-pulse {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scaleY(0.6);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-bar-fill,
+  .scroll-hint-line {
+    animation: none !important;
+    transition: none !important;
+  }
+}
